@@ -1,1 +1,1 @@
-<p align="center"><img src="https://raw.githubusercontent.com/diliadis/wandb_backup_app/blob/main/img/logo.png" alt="logo" height="300"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/diliadis/wandb_backup_app/main/img/logo.png" alt="logo" height="300"/></p>

@@ -26,8 +26,14 @@ def fetch_wandb_projects():
     return projects
 
 
+base_path = "./data/"
+
+
 # Define the two pages of the app
 def login_page():
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
     wandb_project_page_link = "https://wandb.ai/"
     if st.session_state["credentials_verified"] is None:
         with st.form(key="wandb_form"):
@@ -150,15 +156,15 @@ def main_page():
 
         if st.button("backup project", disabled=False):
             # first create the project directory
-            if not os.path.exists("./data/" + selected_project):
-                os.mkdir("./data/" + selected_project)
+            if not os.path.exists(base_path + selected_project):
+                os.mkdir(base_path + selected_project)
             st.info("Saving experiments into json files...")
             for run in stqdm(runs_list):
                 temp_id = run.id
                 # check if the file exists
                 if (
                     not os.path.exists(
-                        "./data/" + selected_project + "/" + temp_id + ".json"
+                        base_path + selected_project + "/" + temp_id + ".json"
                     )
                     or overwrite_backup
                 ):  # check if the experiment file already exists or if the user wants to overwrite it
@@ -168,7 +174,7 @@ def main_page():
                     temp_config["history"] = run.history().to_json()
 
                     with open(
-                        "./data/" + selected_project + "/" + temp_id + ".json", "w"
+                        base_path + selected_project + "/" + temp_id + ".json", "w"
                     ) as fp:
                         json.dump(temp_config, fp)
             st.success("Done")
@@ -180,12 +186,12 @@ def main_page():
                 "Available experiments",
                 [
                     exp.split(".json")[0]
-                    for exp in os.listdir("./data/" + selected_project)
+                    for exp in os.listdir(base_path + selected_project)
                 ],
             )
             if selected_experiment is not None:
                 f = open(
-                    "./data/" + selected_project + "/" + selected_experiment + ".json",
+                    base_path + selected_project + "/" + selected_experiment + ".json",
                     "r",
                 )
                 # Reading from file

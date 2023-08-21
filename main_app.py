@@ -5,8 +5,10 @@ import time
 import os
 import json
 
+
 def check_if_project_already_backed_up(project_name):
-    return os.path.exists("./data/"+project_name)
+    return os.path.exists("./data/" + project_name)
+
 
 # Assuming wandb has a method for such authentication (this is hypothetical)
 def verify_wandb_credentials(username, passkey):
@@ -17,10 +19,12 @@ def verify_wandb_credentials(username, passkey):
     except:
         return False
 
+
 def fetch_wandb_projects():
     # Placeholder; Fetch a list of projects for the authenticated user from wandb
     projects = []
     return projects
+
 
 # Define the two pages of the app
 def login_page():
@@ -40,9 +44,7 @@ def login_page():
                 help="Sets the authentication key associated with your account.",
                 type="password",
             )
-            wandb_api_key_link = (
-                "Check your API key [here](https://wandb.ai/authorize)"
-            )
+            wandb_api_key_link = "Check your API key [here](https://wandb.ai/authorize)"
             st.markdown(wandb_api_key_link, unsafe_allow_html=True)
             wandb_entity = st.text_input(
                 "entity",
@@ -63,7 +65,6 @@ def login_page():
                     with st.spinner(
                         "Trying to log a dummy experiment using the supplied info...."
                     ):
-
                         wandb.login(key=wandb_API_key)
                         wandb_run = wandb.init(
                             entity=wandb_entity, project=wandb_project
@@ -118,53 +119,85 @@ def login_page():
             st.session_state["credentials_verified"] = None
             st.experimental_rerun()
 
-def main_page():
 
+def main_page():
     if st.session_state.credentials_verified or dev_mode:
         st.title("Your Weights & Biases Projects")
 
         api = wandb.Api()
-        projects_list = api.projects("diliadis" if dev_mode else st.session_state["credentials_verified"]["entity"])
+        projects_list = api.projects(
+            "diliadis"
+            if dev_mode
+            else st.session_state["credentials_verified"]["entity"]
+        )
 
-        selected_project = st.selectbox("Available projects", [p.name for p in projects_list])
+        selected_project = st.selectbox(
+            "Available projects", [p.name for p in projects_list]
+        )
         # call backup function
-        with st.spinner('Counting the number of runs...'):
+        with st.spinner("Counting the number of runs..."):
             runs_list = api.runs(
                 # "diliadis" if dev_mode else st.session_state["credentials_verified"]["entity"],
                 selected_project,
             )
-            st.info("There are "+str(len(runs_list))+" in project "+selected_project)
+            st.info(
+                "There are " + str(len(runs_list)) + " in project " + selected_project
+            )
 
         project_already_backed_up = check_if_project_already_backed_up(selected_project)
-        
-        if st.button('backup project', disabled=project_already_backed_up):
+
+        overwrite_backup = st.checkbox("Overwrite existing backup", value=False)
+
+        if st.button("backup project", disabled=False):
             # first create the project directory
-            os.mkdir("./data/"+selected_project) 
-            st.info('Saving experiments into json files...')
+            if not os.path.exists("./data/" + selected_project):
+                os.mkdir("./data/" + selected_project)
+            st.info("Saving experiments into json files...")
             for run in stqdm(runs_list):
                 temp_id = run.id
-                temp_config = run.config
-                temp_config["history"] = run.history().to_json()
-                
-                with open("./data/"+selected_project+"/"+temp_id+".json", "w") as fp:
-                    json.dump(temp_config, fp)
-            st.success('Done')
-        
+                # check if the file exists
+                if (
+                    not os.path.exists(
+                        "./data/" + selected_project + "/" + temp_id + ".json"
+                    )
+                    or overwrite_backup
+                ):  # check if the experiment file already exists or if the user wants to overwrite it
+                    if overwrite_backup:
+                        st.toast("Overwriting experiment " + temp_id)
+                    temp_config = run.config
+                    temp_config["history"] = run.history().to_json()
+
+                    with open(
+                        "./data/" + selected_project + "/" + temp_id + ".json", "w"
+                    ) as fp:
+                        json.dump(temp_config, fp)
+            st.success("Done")
+
         # if experiments for a given project are already backed up, show a list of them
         # the user should be able to select one experiment and get a quick view of the stored info
         if project_already_backed_up:
-            selected_experiment = st.selectbox("Available experiments", [exp.split(".json")[0] for exp in os.listdir("./data/"+selected_project)])
+            selected_experiment = st.selectbox(
+                "Available experiments",
+                [
+                    exp.split(".json")[0]
+                    for exp in os.listdir("./data/" + selected_project)
+                ],
+            )
             if selected_experiment is not None:
-                f = open("./data/"+selected_project+"/"+selected_experiment+".json", "r")
+                f = open(
+                    "./data/" + selected_project + "/" + selected_experiment + ".json",
+                    "r",
+                )
                 # Reading from file
                 exp_data = json.loads(f.read())
                 st.json(exp_data)
             else:
-                st.info('The project appears to be empty')
-        
+                st.info("The project appears to be empty")
+
 
 # Main flow
-if "credentials_verified" not in st.session_state: st.session_state.credentials_verified = None 
+if "credentials_verified" not in st.session_state:
+    st.session_state.credentials_verified = None
 
 dev_mode = True
 
